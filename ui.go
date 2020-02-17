@@ -18,6 +18,13 @@ type UI interface {
 	Eval(js string) Value
 	Done() <-chan struct{}
 	Close() error
+	Callback() interface{}
+	SetCallback(cb interface{})
+}
+
+// NavigatingCallback should be implemented by any callback that wants notification anytime a document load begins
+type NavigatingCallback interface {
+	OnNavigating(url string)
 }
 
 type ui struct {
@@ -171,4 +178,11 @@ func (u *ui) SetBounds(b Bounds) error {
 
 func (u *ui) Bounds() (Bounds, error) {
 	return u.chrome.bounds()
+}
+
+func (u *ui) Callback() interface{} {
+	return u.chrome.callback
+}
+func (u *ui) SetCallback(cb interface{}) {
+	u.chrome.callback = cb
 }
