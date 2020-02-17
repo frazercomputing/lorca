@@ -45,6 +45,7 @@ type chrome struct {
 	window   int
 	pending  map[int]chan result
 	bindings map[string]bindingFunc
+	callback interface{}
 }
 
 func newChromeWithArgs(chromeBinary string, args ...string) (*chrome, error) {
@@ -271,6 +272,21 @@ func (c *chrome) readLoop() {
 
 			if res.ID == 0 && res.Method == "Runtime.consoleAPICalled" || res.Method == "Runtime.exceptionThrown" {
 				log.Println(params.Message)
+			} else if res.Method == "Network.requestWillBeSent" {
+				if c.callback != nil {
+					if cb, ok := c.callback.(NavigatingCallback); ok {
+						var reqMessage struct {
+							Params struct {
+								DocumentURL string `json:"documentURL"`
+								Type        string `json:"type"`
+							} `json:"params"`
+						}
+						json.Unmarshal([]byte(params.Message), &reqMessage)
+						if reqMessage.Params.Type == "Document" {
+							cb.OnNavigating(reqMessage.Params.DocumentURL)
+						}
+					}
+				}
 			} else if res.ID == 0 && res.Method == "Runtime.bindingCalled" {
 				payload := struct {
 					Name string            `json:"name"`
